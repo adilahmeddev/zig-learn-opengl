@@ -19,9 +19,10 @@
             .url = "https://pkg.machengine.org/mach-glfw/e57190c095097810980703aa26d4f0669a21dbab.tar.gz",
             .hash = "12205a32c8e6ca23c68191b1e95405d2bd5f8e3055cba1c8ce0738d673ef49aef913",
         },
-        .zgl = .{
-            .url = "https://github.com/ziglibs/zgl/archive/41eeec2869e58b6d00e376de28271e65f82e48e4.tar.gz",
-            .hash = "1220724f36394bc0d2327b11ceb5124a6c8be23cc3fd73b230c1ebd46a910b8911da",
+       
+        .zigglgen = .{
+            .url = "https://github.com/castholm/zigglgen/releases/download/v0.2.1/zigglgen.tar.gz",
+            .hash = "122059d1ff6787eedb40771eabb0f04d04fe299bd1bae7b216c4a9d894719c2a148a",
         },
     },
 
