@@ -59,9 +59,6 @@ pub fn main() !void {
     glfw.makeContextCurrent(window);
     defer glfw.makeContextCurrent(null);
 
-    // Enable VSync to avoid drawing more often than necessary.
-    glfw.swapInterval(1);
-
     // Initialize the OpenGL procedure table.
     if (!gl_procs.init(glfw.getProcAddress)) {
         log.err("failed to load OpenGL functions", .{});
@@ -72,60 +69,65 @@ pub fn main() !void {
     gl.makeProcTableCurrent(&gl_procs);
     defer gl.makeProcTableCurrent(null);
 
-    const vertexShader = gl.CreateShader(gl.VERTEX_SHADER);
-    if (vertexShader == 0) return error.CreateVertexShaderFailed;
-    defer gl.DeleteShader(vertexShader);
-    gl.ShaderSource(
-        vertexShader,
-        1,
-        (&vertexShaderSource.ptr)[0..1],
-        (&@as(c_int, @intCast(vertexShaderSource.len)))[0..1],
-    );
-    gl.CompileShader(vertexShader);
+    const shaderProgram = shader: {
+        const vertexShader = gl.CreateShader(gl.VERTEX_SHADER);
+        if (vertexShader == 0) return error.CreateVertexShaderFailed;
+        defer gl.DeleteShader(vertexShader);
+        gl.ShaderSource(
+            vertexShader,
+            1,
+            (&vertexShaderSource.ptr)[0..1],
+            (&@as(c_int, @intCast(vertexShaderSource.len)))[0..1],
+        );
+        gl.CompileShader(vertexShader);
 
-    var info_log_buf: [512:0]u8 = undefined;
-    gl.GetShaderiv(vertexShader, gl.COMPILE_STATUS, &success);
-    // check for shader compile errors
-    if (success == gl.FALSE) {
-        gl.GetShaderInfoLog(vertexShader, info_log_buf.len, null, &info_log_buf);
-        log.err("{s}", .{std.mem.sliceTo(&info_log_buf, 0)});
-        return error.CompileVertexShaderFailed;
-    }
+        var info_log_buf: [512:0]u8 = undefined;
+        gl.GetShaderiv(vertexShader, gl.COMPILE_STATUS, &success);
+        // check for shader compile errors
+        if (success == gl.FALSE) {
+            gl.GetShaderInfoLog(vertexShader, info_log_buf.len, null, &info_log_buf);
+            log.err("{s}", .{std.mem.sliceTo(&info_log_buf, 0)});
+            return error.CompileVertexShaderFailed;
+        }
 
-    // fragment shader
-    const fragmentShader = gl.CreateShader(gl.FRAGMENT_SHADER);
-    if (fragmentShader == 0) return error.CreateFragmentShaderFailed;
-    defer gl.DeleteShader(fragmentShader);
-    gl.ShaderSource(
-        fragmentShader,
-        1,
-        (&fragmentShaderSource.ptr)[0..1],
-        (&@as(c_int, @intCast(fragmentShaderSource.len)))[0..1],
-    );
-    gl.CompileShader(fragmentShader);
+        // fragment shader
+        const fragmentShader = gl.CreateShader(gl.FRAGMENT_SHADER);
+        if (fragmentShader == 0) return error.CreateFragmentShaderFailed;
+        defer gl.DeleteShader(fragmentShader);
+        gl.ShaderSource(
+            fragmentShader,
+            1,
+            (&fragmentShaderSource.ptr)[0..1],
+            (&@as(c_int, @intCast(fragmentShaderSource.len)))[0..1],
+        );
+        gl.CompileShader(fragmentShader);
 
-    // check for shader compile errors
-    gl.GetShaderiv(fragmentShader, gl.COMPILE_STATUS, &success);
-    if (success == gl.FALSE) {
-        gl.GetShaderInfoLog(fragmentShader, info_log_buf.len, null, &info_log_buf);
-        log.err("{s}", .{std.mem.sliceTo(&info_log_buf, 0)});
-        return error.CompileFragmentShaderFailed;
-    }
-    // link shaders
-    const shaderProgram = gl.CreateProgram();
-    if (shaderProgram == 0) return error.CreateProgramFailed;
+        // check for shader compile errors
+        gl.GetShaderiv(fragmentShader, gl.COMPILE_STATUS, &success);
+        if (success == gl.FALSE) {
+            gl.GetShaderInfoLog(fragmentShader, info_log_buf.len, null, &info_log_buf);
+            log.err("{s}", .{std.mem.sliceTo(&info_log_buf, 0)});
+            return error.CompileFragmentShaderFailed;
+        }
+        // link shaders
+        const shaderProgram = gl.CreateProgram();
+        if (shaderProgram == 0) return error.CreateProgramFailed;
+        gl.AttachShader(shaderProgram, vertexShader);
+        gl.AttachShader(shaderProgram, fragmentShader);
+        gl.LinkProgram(shaderProgram);
+
+        // check for linking errors
+        gl.GetProgramiv(shaderProgram, gl.LINK_STATUS, &success);
+        if (success == gl.FALSE) {
+            gl.GetProgramInfoLog(shaderProgram, info_log_buf.len, null, &info_log_buf);
+            log.err("{s}", .{std.mem.sliceTo(&info_log_buf, 0)});
+            return error.CreateShaderProgramFailed;
+        }
+
+        break :shader shaderProgram;
+    };
     defer gl.DeleteProgram(shaderProgram);
-    gl.AttachShader(shaderProgram, vertexShader);
-    gl.AttachShader(shaderProgram, fragmentShader);
-    gl.LinkProgram(shaderProgram);
 
-    // check for linking errors
-    gl.GetProgramiv(shaderProgram, gl.LINK_STATUS, &success);
-    if (success == gl.FALSE) {
-        gl.GetProgramInfoLog(shaderProgram, info_log_buf.len, null, &info_log_buf);
-        log.err("{s}", .{std.mem.sliceTo(&info_log_buf, 0)});
-        return error.CreateShaderProgramFailed;
-    }
     const vertices = [_]f32{
         0.5,  0.5,  0.0,
         0.5,  -0.5, 0.0,
